@@ -85,9 +85,14 @@
     //提交按钮和回车提交
     submit.onmouseup = document.onkeyup = function(ev){
         if(ev.keyCode === 13 || ev.button === 0){
+            if(num != 1){
+                render(1)
+            }
             let val = Text.value;
             fetch('/api/weibo?act=add&content=' + val).then(e=>e.json()).then(res=>{
-                console.log(res)
+                if(res.code == -1){
+                    return
+                }
                 let date = new Date(res.time)
                 let time = date.getFullYear() + '-' + (date.getMonth()+1) + '-' + date.getDate() + '  ' + tDou(date.getHours())  + ':' + tDou(date.getMinutes()) + ':' + tDou(date.getSeconds());
                 Add(val,time)
@@ -99,12 +104,12 @@
     }
     //点赞
     messList.onclick = function(ev){
-                if(ev.target.className == 'top'){
-                    let a = ev.target;
-                    let parent = a.parentNode.parentNode.parentNode
+        if(ev.target.className == 'top'){
+            let a = ev.target;
+            let parent = a.parentNode.parentNode.parentNode
                     fetch('/api/weibo?act=like&id=' + parent.dataset.id).then(re=>re.json()).then(res=>{
                         if(res.code === 0){
-                            render(num);
+                            ev.target.innerHTML = Number(ev.target.innerHTML) + 1
                         }
                     })
                 }
@@ -113,11 +118,17 @@
                     let parent = a.parentNode.parentNode.parentNode
                     fetch('/api/weibo?act=dislike&id=' + parent.dataset.id).then(re=>re.json()).then(res=>{
                         if(res.code === 0){
-                            render(num);
+                            ev.target.innerHTML = Number(ev.target.innerHTML) + 1
                         }
                     })
                 }
                 if(ev.target.className == 'cut'){
+                    if(messList.children.length == 1){
+                        page.innerHTML = '';
+                        --num
+                        render(num);
+                        Page(num);
+                    }
                     let a = ev.target;
                     let parent = a.parentNode.parentNode.parentNode
                     fetch('/api/weibo?act=del&id=' + parent.dataset.id).then(re=>re.json()).then(res=>{
