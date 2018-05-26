@@ -1,0 +1,154 @@
+﻿<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title></title>
+    <link href="/public/css/weibo.css" rel="stylesheet" type="text/css"/>
+</head>
+<body>
+<div class="nArea">
+    <!--留言-->
+    <div class="takeComment">
+        <textarea name="textarea" class="takeTextField" id="text"></textarea>
+        <div class="takeSbmComment">
+            <input type="button" id="submit" class="inputs" value=""/>
+            <span>(可按 Enter 回复)</span>
+        </div>
+    </div>
+    <!--已留-->
+    <div class="commentOn">
+        <div class="messList" id="div1" style="height:502px">
+            <!--<div class="reply">
+                <p class="replyContent">卫士，新款卫士将推出总共14种车身式样。其中， XS旅行款车型售价为32295英镑(约33.6万元)。</p>
+                <p class="operation">
+                    <span class="replyTime">2018-09-08 16:37:60</span>
+                    <span class="handle">
+                        <a href="javascript:;" class="top">0</a>
+                        <a href="javascript:;" class="down_icon">0</a>
+                        <a href="javascript:;" class="cut">删除</a>
+                    </span>
+                </p>
+            </div>-->
+        </div>
+        <div class="page" id="page">
+        </div>
+    </div>
+</div>
+<script>
+    const Text= document.getElementById('text')
+    const page= document.getElementById('page')
+    const div1= document.getElementById('div1')
+    const submit= document.getElementById('submit')
+    const messList= document.querySelector('.messList')
+    let num = 1;
+    //渲染页面数据
+    render(1);
+    Page(num);
+    function render(n){
+        num = n
+        div1.innerHTML='';
+        fetch('/api/weibo?act=get&page='+ n).then(e=>e.json()).then(res=>{
+            res.forEach(el=>{
+                div1.appendChild(Add(el.content,el.time,el.id,el.like,el.dislike))
+            })
+        })
+        return num
+    }
+
+    function Page(num){
+        page.innerHTML = '';
+        fetch('/api/weibo?act=get_page_count').then(e=>e.json()).then(res=>{
+            for(let i=0;i<res.count;i++){
+                let a = document.createElement('a')
+                a.href= "javascript:;"
+                a.dataset.id = i+1
+                a.innerHTML = i+1
+                page.appendChild(a)
+            }
+            //页码
+            let as = Array.from(page.children)
+            for(let i=0;i<as.length;i++){
+                if(i+1 == num){
+                    as[i].className = 'active'
+                }
+                as[i].onclick = function(){
+                    as.forEach(e=>{
+                        e.className = ''
+                    })
+                    as[i].className = 'active'
+                    num = i+1
+                    render(num)
+                }
+            }
+        })
+    }
+    //提交按钮和回车提交
+    submit.onmouseup = document.onkeyup = function(ev){
+        if(ev.keyCode === 13 || ev.button === 0){
+            let val = Text.value;
+            fetch('/api/weibo?act=add&content=' + val).then(e=>e.json()).then(res=>{
+                console.log(res)
+                let date = new Date(res.time)
+                let time = date.getFullYear() + '-' + (date.getMonth()+1) + '-' + date.getDate() + '  ' + tDou(date.getHours())  + ':' + tDou(date.getMinutes()) + ':' + tDou(date.getSeconds());
+                Add(val,time)
+                div1.insertBefore(Add(val,time,res.id,0,0),div1.children[0])
+                Page(num);
+            })
+            Text.value = ''
+        }
+    }
+    //点赞
+    messList.onclick = function(ev){
+                if(ev.target.className == 'top'){
+                    let a = ev.target;
+                    let parent = a.parentNode.parentNode.parentNode
+                    fetch('/api/weibo?act=like&id=' + parent.dataset.id).then(re=>re.json()).then(res=>{
+                        if(res.code === 0){
+                            render(num);
+                        }
+                    })
+                }
+                if(ev.target.className == 'down_icon'){
+                    let a = ev.target;
+                    let parent = a.parentNode.parentNode.parentNode
+                    fetch('/api/weibo?act=dislike&id=' + parent.dataset.id).then(re=>re.json()).then(res=>{
+                        if(res.code === 0){
+                            render(num);
+                        }
+                    })
+                }
+                if(ev.target.className == 'cut'){
+                    let a = ev.target;
+                    let parent = a.parentNode.parentNode.parentNode
+                    fetch('/api/weibo?act=del&id=' + parent.dataset.id).then(re=>re.json()).then(res=>{
+                        if(res.code === 0){
+                            render(num);
+                            Page(num);
+                        }
+                    })
+                }
+            }
+    //按位补零
+    function tDou(n){
+        return n<10?'0'+n:''+n;
+    }
+    //生成的数据
+    function Add(val,time,Id,like,dislike){
+        let div = document.createElement('div')
+            div.className = 'reply';
+            div.dataset.id = Id;
+            div.innerHTML =`
+                <p class="replyContent">${val}</p>
+                <p class="operation">
+                    <span class="replyTime">${time}</span>
+                    <span class="handle">
+                        <a href="javascript:;" class="top">${like}</a>
+                        <a href="javascript:;" class="down_icon">${dislike}</a>
+                        <a href="javascript:;" class="cut">删除</a>
+                    </span>
+                </p>`
+        return div
+    }
+</script>
+</body>
+</html>
