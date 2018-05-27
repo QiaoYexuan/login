@@ -31,6 +31,7 @@
             </div>-->
         </div>
         <div class="page" id="page">
+            
         </div>
     </div>
 </div>
@@ -41,6 +42,7 @@
     const submit= document.getElementById('submit')
     const messList= document.querySelector('.messList')
     let num = 1;
+    let num1 = 0
     //渲染页面数据
     render(1);
     Page(num);
@@ -48,17 +50,20 @@
         num = n
         div1.innerHTML='';
         fetch('/api/weibo?act=get&page='+ n).then(e=>e.json()).then(res=>{
+            if(res.code === -1){
+                return
+            }
             res.forEach(el=>{
                 div1.appendChild(Add(el.content,el.time,el.id,el.like,el.dislike))
             })
         })
         return num
     }
-
+    //page页面
     function Page(num){
         page.innerHTML = '';
         fetch('/api/weibo?act=get_page_count').then(e=>e.json()).then(res=>{
-            for(let i=0;i<res.count;i++){
+            for(let i=(num1<0?0:num1);i<10+(num1<0?0:num1);i++){
                 let a = document.createElement('a')
                 a.href= "javascript:;"
                 a.dataset.id = i+1
@@ -67,11 +72,25 @@
             }
             //页码
             let as = Array.from(page.children)
+            if(num1 > 0){
+                as[5].className = 'active'
+            }
             for(let i=0;i<as.length;i++){
-                if(i+1 == num){
+                if(i+1 == num && num1 == 0){
                     as[i].className = 'active'
                 }
                 as[i].onclick = function(){
+                    if(i > 5){
+                        num1 = this.innerHTML*1 - 6
+                        Page(num1)
+                    }else{
+                        num1 = this.innerHTML*1 - 6
+                        if(num1<0){
+                            num1 = 0
+                        }else{
+                            Page(num1)
+                        }
+                    }
                     as.forEach(e=>{
                         e.className = ''
                     })
@@ -123,9 +142,12 @@
                     })
                 }
                 if(ev.target.className == 'cut'){
+                    if(!messList.children.length){
+                        return
+                    }
                     if(messList.children.length == 1){
                         page.innerHTML = '';
-                        --num
+                        --num;
                         render(num);
                         Page(num);
                     }
